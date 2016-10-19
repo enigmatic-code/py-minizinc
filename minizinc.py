@@ -87,7 +87,9 @@ class MiniZinc(object):
     return getattr(self, k)
 
   def solve(self, **args):
-
+    """
+    solve the MiniZinc model and return solutions as Python objects.
+    """
     model = self._getattr('model', args)
     result = self._getattr('result', args)
     solver = self._getattr('solver', args)
@@ -141,6 +143,9 @@ class MiniZinc(object):
       os.unlink(path)
 
   def go(self, **args):
+    """
+    solve the MiniZinc model and output solutions.
+    """
     for s in self.solve(**args):
       try:
         s = s._asdict()

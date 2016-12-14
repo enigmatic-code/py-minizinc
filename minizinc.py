@@ -42,6 +42,7 @@ def array(d, i, vs):
     return v
   return None
 
+
 _defaults = {
   'model': None,
   'result': None,
@@ -58,11 +59,14 @@ class MiniZinc(object):
 
   Parameters:
 
-    model = the text of the MiniZinc model (default: None)
+    model = the MiniZinc model (default: None)
     result = how to return the results (default: None)
     solver = the solver to use (default: "mzn-gecode -a")
     encoding = encoding used by MiniZinc (default: "utf-8")
     verbose = output additional information (default: 0)
+
+  The "model" parameter can be the text of the MiniZinc model,
+  or the path of a file containing the model.
 
   If the "result" parameter is specified is should be an acceptable
   field_names parameter to collections.namedtuple(), and these fields
@@ -104,14 +108,22 @@ class MiniZinc(object):
     if result:
       Value = collections.namedtuple('Value', result)
 
-    # write the model to a file
-    (fd, path) = tempfile.mkstemp(suffix='.mzn', text=False)
-    try:
-      # write the model in the appropriate encoding
-      os.write(fd, model.encode(encoding))
-      os.close(fd)
+    # is the model already a file? (possible race condition here)
+    create = (not os.path.isfile(model))
 
-      # and run minizinc
+    # do we need to write the model to a file?
+    if create:
+      (fd, path) = tempfile.mkstemp(suffix='.mzn', text=False)
+    else:
+      path = model
+
+    try:
+      if create:
+        # write the model in the appropriate encoding
+        os.write(fd, model.encode(encoding))
+        os.close(fd)
+
+      # run minizinc
       if verbose > 1: print(">>> solver=\"{solver}\"".format(solver=' '.join(solver)))
       p = subprocess.Popen(solver + [path], stdout=subprocess.PIPE, bufsize=1)
       d = None
@@ -139,8 +151,9 @@ class MiniZinc(object):
             d[k] = parse(v)
 
     finally:
-      # remove the temporary file
-      os.unlink(path)
+      if create:
+        # remove the temporary file
+        os.unlink(path)
 
   def go(self, **args):
     """

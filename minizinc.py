@@ -165,3 +165,25 @@ class MiniZinc(object):
       except AttributeError:
         pass
       print(' '.join(k + "=" + repr(v) for (k, v) in s.items()))
+
+
+# helper functions for interpolation in MiniZinc models
+
+# declare a bunch of minizinc variables
+def var(domain, vars):
+  return "\n".join("var {domain}: {v};".format(domain=domain, v=v) for v in vars)
+
+# replace word with the alphametic equivalent expression
+def _word(w, base):
+  (m, d) = (1, dict())
+  for x in w[::-1]:
+    d[x] = d.get(x, 0) + m
+    m *= base
+  return "(" + ' + '.join((''.join((str(k),) + (() if v == 1 else ('*', str(v)))) for (k, v) in d.items())) + ")"
+
+# make a function to expand the alphametic words in s
+def make_alphametic(symbols, base=10):
+  def alphametic(s):
+    f = lambda m: _word(m.group(0), base)
+    return re.sub('[' + symbols + ']+', f, s)
+  return alphametic

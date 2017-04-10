@@ -124,6 +124,7 @@ class MiniZinc(object):
         os.close(fd)
 
       # run minizinc
+      if verbose > 2: print(">>> model=\"\"\"\n{model}\n\"\"\"".format(model=model.strip()))
       if verbose > 1: print(">>> solver=\"{solver}\"".format(solver=' '.join(solver)))
       p = subprocess.Popen(solver + [path], stdout=subprocess.PIPE, bufsize=1)
       d = None
@@ -166,12 +167,18 @@ class MiniZinc(object):
         pass
       print(' '.join(k + "=" + repr(v) for (k, v) in s.items()))
 
+  def substitute(self, s, t):
+    """
+    use solution s to substitute symbols in text t.
+    """
+    return ''.join(map(str, (s.get(x, x) for x in t)))
+
 
 # helper functions for interpolation in MiniZinc models
 
 # declare a bunch of minizinc variables
 def var(domain, vars):
-  return "\n".join("var {domain}: {v};".format(domain=domain, v=v) for v in vars)
+  return ";\n".join("var {domain}: {v}".format(domain=domain, v=v) for v in vars)
 
 # replace word with the alphametic equivalent expression
 def _word(w, base):

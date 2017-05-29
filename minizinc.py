@@ -177,8 +177,18 @@ class MiniZinc(object):
 # helper functions for interpolation in MiniZinc models
 
 # declare a bunch of minizinc variables
-def var(domain, vars):
-  return ";\n".join("var {domain}: {v}".format(domain=domain, v=v) for v in vars)
+def var(*args):
+  if len(args) == 2:
+    # var("0..9", "xyz")
+    (domain, vars) = args
+    pre = ""
+  elif len(args) == 3:
+    # var("array[0..9] of", "0..9", "ABC")
+    (pre, domain, vars) = args
+    pre += " "
+  else:
+    raise ValueError
+  return ";\n".join("{pre}var {domain}: {v}".format(pre=pre, domain=domain, v=v) for v in vars)
 
 # replace word with the alphametic equivalent expression
 def _word(w, base):

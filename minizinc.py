@@ -204,3 +204,7 @@ def make_alphametic(symbols, base=10):
     f = lambda m: _word(m.group(0), base)
     return re.sub('[' + symbols + ']+', f, s)
   return alphametic
+
+# expand alphametic words (enclosed in braces) in s
+def alphametic(s, base=10):
+  return re.sub('{(\w+?)}', lambda m: _word(m.group(1), base), s)

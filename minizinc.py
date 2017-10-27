@@ -10,24 +10,25 @@ import subprocess
 import tempfile
 import os
 
-# parse an mzn value to a python value
-# int -> int
-# float -> float
-# array -> dict
+# parse an mzn value to a python value, currently we can handle:
+#   "true" | "false" -> True | False
+#   int -> int
+#   float -> float
+#   array -> dict
 def parse(s):
   # array:              (dim)   (idx) (vs)
   m = re.search(r'^array(\d+)d\((.+)\[(.+)\]\)', s)
   if m:
-    return array(int(m.group(1)), re.split(r'\s*,\s*', m.group(2)), re.split(r'\s*,\s*', m.group(3)))
-  for fn in (int, float):
+    return parse_array(int(m.group(1)), re.split(r'\s*,\s*', m.group(2)), re.split(r'\s*,\s*', m.group(3)))
+  for fn in (parse_bool, int, float):
     try:
       return fn(s)
     except ValueError:
       continue
   return None
 
-# parse an mzn array
-def array(d, i, vs):
+# parse an mzn array to a python dict()
+def parse_array(d, i, vs):
   #print([d, i, vs])
   (s, f) = map(int, re.split(r'\s*\.\.\s*', i[0]))
   if d == 1:
@@ -42,6 +43,11 @@ def array(d, i, vs):
     return v
   return None
 
+# parse a bool
+def parse_bool(s):
+  if s == "true": return True
+  if s == "false": return False
+  raise ValueError
 
 _defaults = {
   'model': None,
@@ -133,6 +139,7 @@ class MiniZinc(object):
         if not s: break
         # read output (in the appropriate encoding)
         s = s.decode(encoding).rstrip()
+        #print(">>> {s} <<<".format(s=s))
         if re.search(r'^-+$', s):
           #print("<{s}> end of record".format(s=s))
           if verbose > 0: print(">>> solution: " + ' '.join(k + "=" + repr(v) for (k, v) in d.items()))
@@ -208,3 +215,8 @@ def make_alphametic(symbols, base=10):
 # expand alphametic words (enclosed in braces) in s
 def alphametic(s, base=10):
   return re.sub('{(\w+?)}', lambda m: _word(m.group(1), base), s)
+
+# substitute ...
+def substitute(s, d):
+  fn = (d if callable(d) else lambda x: str(d.get(x, '?')))
+  return re.sub('{(\w+?)}', lambda m: ''.join(fn(x) for x in m.group(1)), s)

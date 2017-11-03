@@ -9,6 +9,11 @@ output formatting in Python.
 
 For usage examples see:
 
+"Enigma 421: Simple arithmetic"
+
+https://enigmaticcode.wordpress.com/2017/11/03/enigma-421-simple-arithmetic/#comment-6067
+
+
 "Enigma 361: How many furlongs to the mile?"
 
 https://enigmaticcode.wordpress.com/2016/09/09/enigma-361-how-many-furlongs-to-the-mile/#comment-5099

@@ -39,7 +39,7 @@ def parse_array(d, i, vs):
   else:
     v = dict()
     for j in range(s, f + 1):
-      v[j] = array(d - 1, i[1:], vs)
+      v[j] = parse_array(d - 1, i[1:], vs)
     return v
   return None
 

@@ -52,3 +52,8 @@ https://enigmaticcode.wordpress.com/2017/04/10/enigma-1120-assorted-numbers/#com
 "Tantalizer 483: Thought for food"
 
 https://enigmaticcode.wordpress.com/2017/05/04/tantalizer-483-thought-for-food/#comment-5529
+
+
+"Enigma 1084: 1-2-3 triangles"
+
+https://enigmaticcode.wordpress.com/2017/12/08/enigma-1084-1-2-3-triangles/#comment-6159

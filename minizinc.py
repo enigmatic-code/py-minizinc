@@ -55,7 +55,26 @@ _defaults = {
   'solver': 'mzn-gecode -a',
   'encoding': 'utf-8',
   'verbose': 0,
+  # additional arguments require for win32
+  'mzn_dir': None,
+  'use_shell': False,
 }
+
+import sys
+if sys.platform == "win32":
+  # some possible places that MiniZinc might be installed
+  # if none of these work use the 'mzn_dir' parameter
+  ps = [
+    r'C:/Program Files/MiniZinc IDE (bundled)',
+    r'C:/Program Files/MiniZinc IDE',
+    r'C:/Program Files (x86)/MiniZinc IDE (bundled)',
+    r'C:/Program Files (x86)/MiniZinc IDE',
+  ]
+  for p in ps:
+    if os.path.isdir(p):
+      _defaults['mzn_dir'] = p
+      break
+  _defaults['use_shell'] = True
 
 class MiniZinc(object):
   """
@@ -71,6 +90,9 @@ class MiniZinc(object):
     encoding = encoding used by MiniZinc (default: "utf-8")
     verbose = output additional information (default: 0)
 
+    mzn_dir = MiniZinc install directory (default: None)
+    use_shell = use the shell to execute commands (default: False)
+
   The "model" parameter can be the text of the MiniZinc model,
   or the path of a file containing the model.
 
@@ -81,6 +103,12 @@ class MiniZinc(object):
   If the "result" parameter is None (the default) then the results
   are returned as a collections.OrderedDict().
 
+  If the MiniZinc executables are not on PATH or in any of the
+  expected places you can specify the directory where they are using
+  "mzn_dir", and the MiniZinc command will be executed in that directory.
+  This may be needed on MS Windows.
+
+  Also on MS Windows "use_shell" defaults to True.
   """
 
   def __init__(self, model=None, **args):
@@ -105,10 +133,18 @@ class MiniZinc(object):
     solver = self._getattr('solver', args)
     encoding = self._getattr('encoding', args)
     verbose = self._getattr('verbose', args)
+    # additional arguments required on win32
+    mzn_dir = self._getattr('mzn_dir', args)
+    use_shell = self._getattr('use_shell', args)
+
+    # if mzn_dir is specified, if should be a directory
+    if mzn_dir and not(os.path.isdir(mzn_dir)):
+      print("WARNING: cannot find MiniZinc directory \"{mzn_dir}\"".format(mzn_dir=mzn_dir))
 
     # solver should be a list
     if type(solver) is not list:
-      solver = solver.split()
+      import shlex
+      solver = shlex.split(solver)
 
     # result value
     if result:
@@ -131,8 +167,9 @@ class MiniZinc(object):
 
       # run minizinc
       if verbose > 2: print(">>> model=\"\"\"\n{model}\n\"\"\"".format(model=model.strip()))
-      if verbose > 1: print(">>> solver=\"{solver}\"".format(solver=' '.join(solver)))
-      p = subprocess.Popen(solver + [path], stdout=subprocess.PIPE, bufsize=1)
+      if verbose > 2: print(">>> path={path}".format(path=path))
+      if verbose > 1: print(">>> solver={solver}".format(solver=solver))
+      p = subprocess.Popen(solver + [path], stdout=subprocess.PIPE, bufsize=1, cwd=mzn_dir, shell=use_shell)
       d = None
       while True:
         s = p.stdout.readline()

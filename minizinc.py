@@ -3,6 +3,9 @@
 
 from __future__ import print_function
 
+__author__ = "Jim Randell <jim.randell@gmail.com>"
+__version__ = "2017-12-10"
+
 import collections
 import re
 

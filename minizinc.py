@@ -206,13 +206,19 @@ class MiniZinc(object):
   def go(self, **args):
     """
     solve the MiniZinc model and output solutions.
+
+    fmt - specify output format
     """
+    fmt = args.pop('fmt', None)
     for s in self.solve(**args):
       try:
         s = s._asdict()
       except AttributeError:
         pass
-      print(' '.join(k + "=" + repr(v) for (k, v) in s.items()))
+      if fmt:
+        print(substitute(fmt, s))
+      else:
+        print(' '.join(k + "=" + repr(v) for (k, v) in s.items()))
 
   def substitute(self, s, t):
     """

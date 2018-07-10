@@ -4,7 +4,7 @@
 from __future__ import print_function
 
 __author__ = "Jim Randell <jim.randell@gmail.com>"
-__version__ = "2018-02-10"
+__version__ = "2018-07-09"
 
 import collections
 import re
@@ -116,6 +116,7 @@ class MiniZinc(object):
 
   def __init__(self, model=None, **args):
     self._setattrs(_defaults)
+    self._setattrs(args)
     self.model = model
 
   def _setattrs(self, d):

@@ -57,6 +57,7 @@ _defaults = {
   'result': None,
   'solver': 'mzn-gecode -a',
   'encoding': 'utf-8',
+  'use_shebang': 0,
   'verbose': 0,
   # additional arguments require for win32
   'mzn_dir': None,
@@ -136,6 +137,7 @@ class MiniZinc(object):
     result = self._getattr('result', args)
     solver = self._getattr('solver', args)
     encoding = self._getattr('encoding', args)
+    use_shebang = self._getattr('use_shebang', args)
     verbose = self._getattr('verbose', args)
     # additional arguments required on win32
     mzn_dir = self._getattr('mzn_dir', args)
@@ -144,11 +146,6 @@ class MiniZinc(object):
     # if mzn_dir is specified, if should be a directory
     if mzn_dir and not(os.path.isdir(mzn_dir)):
       print("WARNING: cannot find MiniZinc directory \"{mzn_dir}\"".format(mzn_dir=mzn_dir))
-
-    # solver should be a list
-    if type(solver) is not list:
-      import shlex
-      solver = shlex.split(solver)
 
     # result value
     if result:
@@ -168,6 +165,20 @@ class MiniZinc(object):
         # write the model in the appropriate encoding
         os.write(fd, model.encode(encoding))
         os.close(fd)
+
+      if use_shebang and 'solver' not in args:
+        shebang = "#!"
+        with open(path, 'r') as fh:
+          s = next(fh)
+          i = s.find(shebang)
+          assert i != -1, "interpreter not found"
+          solver = s[i + len(shebang):].strip()
+          #print("use_shebang: solver={solver}".format(solver=solver))
+
+      # solver should be a list
+      if type(solver) is not list:
+        import shlex
+        solver = shlex.split(solver)
 
       # run minizinc
       if verbose > 2: print(">>> model=\"\"\"\n{model}\n\"\"\"".format(model=model.strip()))

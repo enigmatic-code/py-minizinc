@@ -92,6 +92,7 @@ class MiniZinc(object):
     result = how to return the results (default: None)
     solver = the solver to use (default: "mzn-gecode -a")
     encoding = encoding used by MiniZinc (default: "utf-8")
+    use_shebang = if true, get 'solver' from model (default: 0)
     verbose = output additional information (default: 0)
 
     mzn_dir = MiniZinc install directory (default: None)
@@ -107,13 +108,16 @@ class MiniZinc(object):
   If the "result" parameter is None (the default) then the results
   are returned as a collections.OrderedDict().
 
+  If the "use_shebang" parameter is set to true then the first line of
+  the model will be interrogated for a specification "%#! <solver>".
+
   If the MiniZinc executables are not on PATH or in any of the
   expected places you can specify the directory where they are using
   "mzn_dir", and the MiniZinc command will be executed in that directory.
   This may be needed on MS Windows.
 
   Also on MS Windows "use_shell" defaults to True.
-  """
+  """ #"
 
   def __init__(self, model=None, **args):
     self._setattrs(_defaults)
@@ -167,6 +171,7 @@ class MiniZinc(object):
         os.close(fd)
 
       if use_shebang and 'solver' not in args:
+        # possible race condition here
         shebang = "#!"
         with open(path, 'r') as fh:
           s = next(fh)

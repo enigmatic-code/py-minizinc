@@ -13,6 +13,18 @@ import subprocess
 import tempfile
 import os
 
+import sys
+if sys.version_info[0] == 2:
+  # Python 2.x
+  _python = 2
+  range = xrange
+  basestring = basestring
+elif sys.version_info[0] > 2:
+  # Python 3.x
+  _python = 3
+  range = range
+  basestring = str
+
 # parse an mzn value to a python value, currently we can handle:
 #   "true" | "false" -> True | False
 #   int -> int
@@ -154,6 +166,10 @@ class MiniZinc(object):
     # result value
     if result:
       Value = collections.namedtuple('Value', result)
+
+    # if the model is not a string, turn it into one
+    if not isinstance(model, basestring):
+      model = os.linesep.join(model)
 
     # is the model already a file? (possible race condition here)
     create = (not os.path.isfile(model))

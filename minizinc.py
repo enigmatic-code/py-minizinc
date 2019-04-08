@@ -4,7 +4,7 @@
 from __future__ import print_function
 
 __author__ = "Jim Randell <jim.randell@gmail.com>"
-__version__ = "2018-07-09"
+__version__ = "2019-04-08"
 
 import collections
 import re
@@ -67,7 +67,7 @@ def parse_bool(s):
 _defaults = {
   'model': None,
   'result': None,
-  'solver': 'mzn-gecode -a',
+  'solver': 'minizinc -a', # formerly: 'mzn-gecode -a'
   'encoding': 'utf-8',
   'use_shebang': 0,
   'verbose': 0,
@@ -102,7 +102,7 @@ class MiniZinc(object):
 
     model = the MiniZinc model (default: None)
     result = how to return the results (default: None)
-    solver = the solver to use (default: "mzn-gecode -a")
+    solver = the solver to use (default: "minizinc -a")
     encoding = encoding used by MiniZinc (default: "utf-8")
     use_shebang = if true, get 'solver' from model (default: 0)
     verbose = output additional information (default: 0)
@@ -149,6 +149,18 @@ class MiniZinc(object):
     """
     solve the MiniZinc model and return solutions as Python objects.
     """
+    
+    # can set MZN_DEBUG to override arguments, e.g.:
+    #   MZN_DEBUG="solver=mzn-gecode -a; verbose=3"
+    mzn_debug = os.getenv("MZN_DEBUG")
+    if mzn_debug:
+      print(">>> MZN_DEBUG={mzn_debug}".format(mzn_debug=mzn_debug))
+      for x in re.split(r';\s*', mzn_debug):
+        (k, _, v) = x.partition('=')
+        if not(k and v): continue
+        if k in ['verbose', 'use_shebang', 'use_shell']: v = int(v)
+        args[k] = v
+
     model = self._getattr('model', args)
     result = self._getattr('result', args)
     solver = self._getattr('solver', args)
@@ -215,7 +227,7 @@ class MiniZinc(object):
         #print(">>> {s} <<<".format(s=s))
         if re.search(r'^-+$', s):
           #print("<{s}> end of record".format(s=s))
-          if verbose > 0: print(">>> solution: " + ' '.join(k + "=" + repr(v) for (k, v) in d.items()))
+          if verbose > 0: print(">>> solution: " + str.join(' ', (k + "=" + repr(v) for (k, v) in d.items())))
           if result:
             yield Value(*(d[k] for k in Value._fields))
           else:
@@ -251,13 +263,13 @@ class MiniZinc(object):
       if fmt:
         print(substitute(fmt, s))
       else:
-        print(' '.join(k + "=" + repr(v) for (k, v) in s.items()))
+        print(str.join(' ', (k + "=" + repr(v) for (k, v) in s.items())))
 
   def substitute(self, s, t):
     """
     use solution s to substitute symbols in text t.
     """
-    return ''.join(map(str, (s.get(x, x) for x in t)))
+    return str.join('', map(str, (s.get(x, x) for x in t)))
 
 
 # helper functions for interpolation in MiniZinc models
@@ -274,7 +286,7 @@ def var(*args):
     pre += " "
   else:
     raise ValueError
-  return ";\n".join("{pre}var {domain}: {v}".format(pre=pre, domain=domain, v=v) for v in vars)
+  return str.join(";\n", ("{pre}var {domain}: {v}".format(pre=pre, domain=domain, v=v) for v in vars))
 
 # replace word with the alphametic equivalent expression
 def _word(w, base):
@@ -282,7 +294,7 @@ def _word(w, base):
   for x in w[::-1]:
     d[x] = d.get(x, 0) + m
     m *= base
-  return "(" + ' + '.join((''.join((str(k),) + (() if v == 1 else ('*', str(v)))) for (k, v) in d.items())) + ")"
+  return "(" + str.join(' + ', (str.join('', (str(k),) + (() if v == 1 else ('*', str(v)))) for (k, v) in d.items())) + ")"
 
 # make a function to expand the alphametic words in s
 def make_alphametic(symbols, base=10):
@@ -298,4 +310,4 @@ def alphametic(s, base=10):
 # substitute ...
 def substitute(s, d):
   fn = (d if callable(d) else lambda x: str(d.get(x, '?')))
-  return re.sub('{(\w+?)}', lambda m: ''.join(fn(x) for x in m.group(1)), s)
+  return re.sub('{(\w+?)}', lambda m: str.join('', (fn(x) for x in m.group(1))), s)

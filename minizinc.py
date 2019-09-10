@@ -184,6 +184,7 @@ class MiniZinc(object):
       model = os.linesep.join(model)
 
     # is the model already a file? (possible race condition here)
+    create = 1
     if os.path.isfile(model):
       (create, path) = (0, model)
     else:
@@ -193,8 +194,8 @@ class MiniZinc(object):
         x = os.path.join(os.path.dirname(os.path.abspath(x)), model)
         if os.path.isfile(x):
           (create, path) = (0, x)
-      else:
-        (create, (fd, path)) = (1, tempfile.mkstemp(suffix='.mzn', text=False))
+    if create:
+      (fd, path) = tempfile.mkstemp(suffix='.mzn', text=False)
 
     try:
       if create:

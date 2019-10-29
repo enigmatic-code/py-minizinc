@@ -25,36 +25,50 @@ elif sys.version_info[0] > 2:
   range = range
   basestring = str
 
+# TODO: it may be better to pass [[ --output-mode json ]] to minizinc,
+# rather than this ad-hoc regexp parsing
+
 # parse an mzn value to a python value, currently we can handle:
 #   "true" | "false" -> True | False
 #   int -> int
 #   float -> float
 #   array -> dict
-def parse(s):
-  # array:              (dim)   (idx) (vs)
+def parse(s, ctx=None):
+  # array               (dim)   (idx) (vs)
   m = re.search(r'^array(\d+)d\((.+)\[(.+)\]\)', s)
   if m:
-    return parse_array(int(m.group(1)), re.split(r'\s*,\s*', m.group(2)), re.split(r'\s*,\s*', m.group(3)))
+    return parse_array(int(m.group(1)), re.split(r'\s*,\s*', m.group(2)), re.split(r'\s*,\s*', m.group(3)), ctx)
+  # literal
   for fn in (parse_bool, int, float):
     try:
       return fn(s)
     except ValueError:
       continue
-  return None
+  # verbatim value (could be an enum)
+  return s
 
 # parse an mzn array to a python dict()
-def parse_array(d, i, vs):
+def parse_array(d, i, vs, ctx=None):
   #print([d, i, vs])
-  (s, f) = map(int, re.split(r'\s*\.\.\s*', i[0]))
+  # look for index = <number>..<number>
+  m = re.match(r'(\d+)\.\.(\d+)$', i[0])
+  if m:
+    (a, b) = map(int, m.groups())
+    js = range(a, b + 1)
+  elif ctx:
+    # look in the context
+    js = ctx._index.get(i[0], None)
+  if not js:
+    raise ValueError("bad index: " + i[0])
   if d == 1:
     v = dict()
-    for j in range(s, f + 1):
-      v[j] = parse(vs.pop(0))
+    for j in js:
+      v[j] = parse(vs.pop(0), ctx)
     return v
   else:
     v = dict()
-    for j in range(s, f + 1):
-      v[j] = parse_array(d - 1, i[1:], vs)
+    for j in js:
+      v[j] = parse_array(d - 1, i[1:], vs, ctx)
     return v
   return None
 
@@ -62,7 +76,13 @@ def parse_array(d, i, vs):
 def parse_bool(s):
   if s == "true": return True
   if s == "false": return False
-  raise ValueError
+  raise ValueError("bad bool: " + s)
+
+# find enum definitions
+def find_enum_defs(s):
+  # beware capturing commented out code with this
+  for m in re.finditer(r'\benum\s+(\w+)\s*=\s*\{\s*(.+?)\s*\}', s):
+    yield (m.group(1), re.split(r'\s*,\s*', m.group(2)))
 
 _defaults = {
   'model': None,
@@ -70,6 +90,8 @@ _defaults = {
   'solver': 'minizinc -a', # formerly: 'mzn-gecode -a'
   'encoding': 'utf-8',
   'use_shebang': 0,
+  'use_embed': 0,
+  'use_enum': 0,
   'verbose': 0,
   # additional arguments require for win32
   'mzn_dir': None,
@@ -94,6 +116,24 @@ if sys.platform == "win32":
       break
   _defaults['use_shell'] = True
 
+# read "arg=value" arguments from args
+def read_args(args):
+  for x in args:
+    (k, _, v) = x.partition('=')
+    if not(k and v): continue
+    if k == 'verbose' or k.startswith('use_'): v = int(v)
+    yield (k, v)
+
+# does <path> represent a file?
+def is_file(path):
+  # does it directly name a file?
+  if os.path.isfile(path): return path
+  # try looking in the same directory as the script
+  x = sys.argv[0]
+  if x:
+    x = os.path.join(os.path.dirname(os.path.abspath(x)), path)
+    if os.path.isfile(x): return x
+
 class MiniZinc(object):
   """
   Parameters can be specified as keyword arguments either during
@@ -106,7 +146,9 @@ class MiniZinc(object):
     result = how to return the results (default: None)
     solver = the solver to use (default: "minizinc -a")
     encoding = encoding used by MiniZinc (default: "utf-8")
+    use_embed = if true, evaluate embedded Python 3 code in model (default: 0)
     use_shebang = if true, get 'solver' from model (default: 0)
+    use_enum = if true, attempt to use enum definitions from model (default: 0)
     verbose = output additional information (default: 0)
 
     mzn_dir = MiniZinc install directory (default: None)
@@ -147,6 +189,7 @@ class MiniZinc(object):
       return d[k]
     return getattr(self, k)
 
+  # solve the model
   def solve(self, **args):
     """
     solve the MiniZinc model and return solutions as Python objects.
@@ -157,10 +200,7 @@ class MiniZinc(object):
     mzn_debug = os.getenv("MZN_DEBUG")
     if mzn_debug:
       print(">>> MZN_DEBUG={mzn_debug}".format(mzn_debug=mzn_debug))
-      for x in re.split(r';\s*', mzn_debug):
-        (k, _, v) = x.partition('=')
-        if not(k and v): continue
-        if k in ['verbose', 'use_shebang', 'use_shell']: v = int(v)
+      for x in read_args(re.split(r';\s*', mzn_debug)):
         args[k] = v
 
     model = self._getattr('model', args)
@@ -168,10 +208,15 @@ class MiniZinc(object):
     solver = self._getattr('solver', args)
     encoding = self._getattr('encoding', args)
     use_shebang = self._getattr('use_shebang', args)
+    use_embed = self._getattr('use_embed', args)
+    use_enum = self._getattr('use_enum', args)
     verbose = self._getattr('verbose', args)
     # additional arguments required on win32
     mzn_dir = self._getattr('mzn_dir', args)
     use_shell = self._getattr('use_shell', args)
+
+    # use self as a parsing context
+    self._index = args.get('_index', dict())
 
     # if mzn_dir is specified, if should be a directory
     if mzn_dir and not(os.path.isdir(mzn_dir)):
@@ -185,18 +230,25 @@ class MiniZinc(object):
     if not isinstance(model, basestring):
       model = os.linesep.join(model)
 
+    # if the model has embedded Python we need to read it and evaluate the code
+    path = is_file(model)
+    if use_embed:
+      if path:
+        with open(path, 'r') as fh:
+          model = fh.read()
+      # evaluate any embedded python
+      if _python > 2:
+        model = eval('f' + repr(model))
+      else:
+        # not supported in Python 2
+        print(">>> WARNING: embedded Python code not supported in Python 2")
+      # the model is definately a string
+      path = None
+
     # is the model already a file? (possible race condition here)
-    create = 1
-    if os.path.isfile(model):
-      (create, path) = (0, model)
-    else:
-      # try looking in the same directory as the script
-      x = sys.argv[0]
-      if x:
-        x = os.path.join(os.path.dirname(os.path.abspath(x)), model)
-        if os.path.isfile(x):
-          (create, path) = (0, x)
-    if create:
+    create = 0
+    if not path:
+      create = 1
       (fd, path) = tempfile.mkstemp(suffix='.mzn', text=False)
 
     try:
@@ -205,15 +257,32 @@ class MiniZinc(object):
         os.write(fd, model.encode(encoding))
         os.close(fd)
 
-      if use_shebang and 'solver' not in args:
+      # do we need to read the solver or enum definitions from the model?
+      if (use_shebang and 'solver' not in args) or use_enum:
+
         # possible race condition here
-        shebang = "#!"
         with open(path, 'r') as fh:
-          s = next(fh)
-          i = s.find(shebang)
-          assert i != -1, "interpreter not found"
-          solver = s[i + len(shebang):].strip()
-          #print("use_shebang: solver={solver}".format(solver=solver))
+
+          if use_shebang and 'solver' not in args:
+            shebang = "#!"
+            s = next(fh)
+            i = s.find(shebang)
+            assert i != -1, "interpreter not found"
+            solver = s[i + len(shebang):].strip()
+            #print("use_shebang: solver={solver}".format(solver=solver))
+
+          if use_enum:
+            if create:
+              text = model
+            else:
+              fh.seek(0)
+              text = fh.read()
+
+            # strip out comments
+            text = re.sub(r'\s*\%.*$', '', text, flags=re.M)
+            # update _index with enum defintions
+            self._index.update(find_enum_defs(text))
+
 
       # solver should be a list
       if type(solver) is not list:
@@ -248,7 +317,7 @@ class MiniZinc(object):
             (k, v) = (m.group(1), m.group(2))
             #print("<{s}> {k} = {v}".format(s=s, k=k, v=v))
             if d is None: d = collections.OrderedDict()
-            d[k] = parse(v)
+            d[k] = parse(v, self)
 
     finally:
       if create:
@@ -295,6 +364,13 @@ def var(*args):
     raise ValueError
   return str.join(";\n", ("{pre}var {domain}: {v}".format(pre=pre, domain=domain, v=v) for v in vars))
 
+# emulate enums
+# enum(["A", "B", "C"], "Name") = [[ int: A = 1; int: B = 2; int: C = 3; set of int: Name = 1..3; ]]
+def enum(elements, name=None):
+  lines = list("int: {x} = {i}".format(x=x, i=i) for (i, x) in enumerate(elements, start=1))
+  if name is not None: lines.append("set of int: {name} = 1..{x}".format(name=name, x=len(elements)))
+  return str.join(";\n", lines)
+
 # replace word with the alphametic equivalent expression
 def _word(w, base):
   (m, d) = (1, dict())
@@ -318,3 +394,19 @@ def alphametic(s, base=10):
 def substitute(s, d):
   fn = (d if callable(d) else lambda x: str(d.get(x, '?')))
   return re.sub('{(\w+?)}', lambda m: str.join('', (fn(x) for x in m.group(1))), s)
+
+
+# command line usage
+if __name__ == "__main__":
+
+  # this allows:
+  #
+  #   python3.7 minizinc.py model.mzn use_embed=1 [...]
+  #
+  # to execute the given model, with embedded Python expressions evaluated
+
+  argv = sys.argv[1:]
+  args = dict(read_args(argv[1:]))
+  p = MiniZinc(argv[0], **args)
+  p.go(fmt=args.get('fmt', None))
+  

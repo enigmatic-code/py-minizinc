@@ -4,7 +4,7 @@
 from __future__ import print_function
 
 __author__ = "Jim Randell <jim.randell@gmail.com>"
-__version__ = "2019-04-08"
+__version__ = "2019-10-28"
 
 import collections
 import re
@@ -83,8 +83,10 @@ if sys.platform == "win32":
   ps = [
     r'C:/Program Files/MiniZinc IDE (bundled)',
     r'C:/Program Files/MiniZinc IDE',
+    r'C:/Program Files/MiniZinc',
     r'C:/Program Files (x86)/MiniZinc IDE (bundled)',
     r'C:/Program Files (x86)/MiniZinc IDE',
+    r'C:/Program Files (x86)/MiniZinc',
   ]
   for p in ps:
     if os.path.isdir(p):
@@ -222,7 +224,7 @@ class MiniZinc(object):
       if verbose > 2: print(">>> model=\"\"\"\n{model}\n\"\"\"".format(model=model.strip()))
       if verbose > 2: print(">>> path={path}".format(path=path))
       if verbose > 1: print(">>> solver={solver}".format(solver=solver))
-      p = subprocess.Popen(solver + [path], stdout=subprocess.PIPE, bufsize=1, cwd=mzn_dir, shell=use_shell)
+      p = subprocess.Popen(solver + [path], stdout=subprocess.PIPE, bufsize=-1, cwd=mzn_dir, shell=use_shell)
       d = None
       while True:
         s = p.stdout.readline()

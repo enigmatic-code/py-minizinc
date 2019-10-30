@@ -401,12 +401,11 @@ if __name__ == "__main__":
 
   # this allows:
   #
-  #   python3.7 minizinc.py model.mzn use_embed=1 [...]
+  #   python3.7 minizinc.py [use_embed=1 ...] model.mzn
   #
   # to execute the given model, with embedded Python expressions evaluated
 
   argv = sys.argv[1:]
-  args = dict(read_args(argv[1:]))
-  p = MiniZinc(argv[0], **args)
+  args = dict(read_args(argv[:-1]))
+  p = MiniZinc(argv[-1], **args)
   p.go(fmt=args.get('fmt', None))
-  

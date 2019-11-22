@@ -4,7 +4,7 @@
 from __future__ import print_function
 
 __author__ = "Jim Randell <jim.randell@gmail.com>"
-__version__ = "2019-10-28"
+__version__ = "2019-11-22"
 
 import collections
 import re
@@ -97,6 +97,23 @@ _defaults = {
   'mzn_dir': None,
   'use_shell': False,
 }
+
+def usage(xit=1):
+  d = _defaults
+  print("usage: python minizinc.py <args> <model>")
+  print("")
+  print("  args:")
+  print("    result=<str> [default: <all variables>]")
+  print("    solver=<str> [default: {x}]".format(x=d['solver']))
+  print("    encoding=<str> [default: {x}]".format(x=d['encoding']))
+  print("    use_shebang=<int> [default: {x}]".format(x=d['use_shebang']))
+  print("    use_embed=<int> [default: {x}]".format(x=d['use_embed']))
+  print("    use_enum=<int> [default: {x}]".format(x=d['use_enum']))
+  print("    verbose=<int> [default: {x}]".format(x=d['verbose']))
+  print("    mzn_dir=<str> [default: <search>]")
+  print("    use_shell=<int> [default: {x}]".format(x=d['use_shell']))
+  print("")
+  if xit: exit()
 
 import sys
 if sys.platform == "win32":
@@ -401,11 +418,12 @@ if __name__ == "__main__":
 
   # this allows:
   #
-  #   python3.7 minizinc.py [use_embed=1 ...] model.mzn
+  #   python3.8 minizinc.py [use_embed=1 ...] model.mzn
   #
   # to execute the given model, with embedded Python expressions evaluated
 
   argv = sys.argv[1:]
+  if not argv: usage()
   args = dict(read_args(argv[:-1]))
   p = MiniZinc(argv[-1], **args)
   p.go(fmt=args.get('fmt', None))

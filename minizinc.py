@@ -322,7 +322,9 @@ class MiniZinc(object):
         #print(">>> {s} <<<".format(s=s))
         if re.search(r'^-+$', s):
           #print("<{s}> end of record".format(s=s))
-          if js: d = json.loads(' '.join(js))
+          if js:
+            d = json.loads(' '.join(js))
+            js = list()
           if verbose > 0: print(">>> solution: " + str.join(' ', (k + "=" + repr(v) for (k, v) in d.items())))
           if result:
             yield Value(*(d[k] for k in Value._fields))

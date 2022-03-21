@@ -4,7 +4,7 @@
 from __future__ import print_function
 
 __author__ = "Jim Randell <jim.randell@gmail.com>"
-__version__ = "2019-11-22"
+__version__ = "2022-03-21"
 
 import collections
 import re
@@ -26,20 +26,28 @@ elif sys.version_info[0] > 2:
   range = range
   basestring = str
 
-# TODO: it may be better to pass [[ --output-mode json ]] to minizinc,
-# rather than this ad-hoc regexp parsing
+# if [[ --output-mode json ]] is passed to minizinc, then the output
+# will be parsed by json.loads().
 
-# parse an mzn value to a python value, currently we can handle:
+# parse mzn output to Python values, currently we handle:
 #   "true" | "false" -> True | False
 #   int -> int
 #   float -> float
-#   array -> dict
+#   array (with indices) -> dict
+#   array (without indices) -> list
 def parse(s, ctx=None):
+  # indexed array - returned as dict() maping index -> value
   # array               (dim)   (idx) (vs)
   m = re.search(r'^array(\d+)d\((.+)\[(.+)\]\)', s)
   if m:
     return parse_array(int(m.group(1)), re.split(r'\s*,\s*', m.group(2)), re.split(r'\s*,\s*', m.group(3)), ctx)
-  # literal
+  # unindexed arrays - return as list()
+  # 2d array as: "x = [| a, b, c, ... | a, b, c, ... | ... |]"
+  # 1d array as: "x = [a, b, c, ...]"
+  m = re.search(r'^\[\s*(.+)\s*\]', s)
+  if m:
+    return parse_array_to_list(m.group(1))
+  # literal -> bool, int, float
   for fn in (parse_bool, int, float):
     try:
       return fn(s)
@@ -72,6 +80,13 @@ def parse_array(d, i, vs, ctx=None):
       v[j] = parse_array(d - 1, i[1:], vs, ctx)
     return v
   return None
+
+# parse an mzn array to a Python list
+def parse_array_to_list(s):
+  m = re.match(r'^\|\s*(.+)\s*\|$', s)
+  if m:
+    return list(parse_array_to_list(x) for x in re.split(r'\s*\|\s*', m.group(1)))
+  return list(parse(x) for x in re.split(r'\s*,\s*', s))
 
 # parse a bool
 def parse_bool(s):
@@ -313,7 +328,7 @@ class MiniZinc(object):
       if verbose > 1: print(">>> solver={solver}".format(solver=solver))
       p = subprocess.Popen(solver + [path], stdout=subprocess.PIPE, bufsize=-1, cwd=mzn_dir, shell=use_shell)
       d = None
-      js = list()
+      ss = list()
       while True:
         s = p.stdout.readline()
         if not s: break
@@ -322,31 +337,28 @@ class MiniZinc(object):
         #print(">>> {s} <<<".format(s=s))
         if re.search(r'^-+$', s):
           #print("<{s}> end of record".format(s=s))
-          if js:
-            d = json.loads(' '.join(js))
-            js = list()
+          # detect JSON mode
+          if ss and ss[0] == '{':
+            d = json.loads(' '.join(ss))
           if verbose > 0: print(">>> solution: " + str.join(' ', (k + "=" + repr(v) for (k, v) in d.items())))
           if result:
             yield Value(*(d[k] for k in Value._fields))
           else:
             yield d
           d = None
-        elif js:
-          js.append(s)
-        elif s == '{':
-          # switch to JSON mode
-          js.append(s)
+          ss = list()
         else:
-          # deal with legacy format
-          #print(">>> {s} <<<".format(s=s))
-          m = re.search(r'^(\w+)\s*=\s*(.+)\s*;$', s)
+          ss.append(s)
+          #print(">>> {ss} <<<".format(ss=ss))
+          m = re.search(r'^(\w+)\s*=\s*(.+)\s*;$', ' '.join(ss))
           #print(">>> {m} <<<".format(m=m))
           if m:
             (k, v) = (m.group(1), m.group(2))
-            #print("<{s}> {k} = {v}".format(s=s, k=k, v=v))
+            #print("<{ss}> {k} = >>> {v} <<<".format(s=s, k=k, v=v))
             if d is None: d = collections.OrderedDict()
             d[k] = parse(v, self)
-
+            ss = list()
+            
     finally:
       if create:
         # remove the temporary file

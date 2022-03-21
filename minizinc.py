@@ -8,6 +8,7 @@ __version__ = "2019-11-22"
 
 import collections
 import re
+import json
 
 import subprocess
 import tempfile
@@ -312,6 +313,7 @@ class MiniZinc(object):
       if verbose > 1: print(">>> solver={solver}".format(solver=solver))
       p = subprocess.Popen(solver + [path], stdout=subprocess.PIPE, bufsize=-1, cwd=mzn_dir, shell=use_shell)
       d = None
+      js = list()
       while True:
         s = p.stdout.readline()
         if not s: break
@@ -320,13 +322,20 @@ class MiniZinc(object):
         #print(">>> {s} <<<".format(s=s))
         if re.search(r'^-+$', s):
           #print("<{s}> end of record".format(s=s))
+          if js: d = json.loads(' '.join(js))
           if verbose > 0: print(">>> solution: " + str.join(' ', (k + "=" + repr(v) for (k, v) in d.items())))
           if result:
             yield Value(*(d[k] for k in Value._fields))
           else:
             yield d
           d = None
+        elif js:
+          js.append(s)
+        elif s == '{':
+          # switch to JSON mode
+          js.append(s)
         else:
+          # deal with legacy format
           #print(">>> {s} <<<".format(s=s))
           m = re.search(r'^(\w+)\s*=\s*(.+)\s*;$', s)
           #print(">>> {m} <<<".format(m=m))
@@ -418,7 +427,7 @@ if __name__ == "__main__":
 
   # this allows:
   #
-  #   python3.8 minizinc.py [use_embed=1 ...] model.mzn
+  #   python3 minizinc.py [use_embed=1 ...] model.mzn
   #
   # to execute the given model, with embedded Python expressions evaluated
 

@@ -1,10 +1,10 @@
-#!/usr/bin/env python -t
+#! python3
 # -*- mode: Python; py-indent-offset: 2; -*-
 
 from __future__ import print_function
 
 __author__ = "Jim Randell <jim.randell@gmail.com>"
-__version__ = "2022-03-21"
+__version__ = "2022-05-25"
 
 import collections
 import re
@@ -28,6 +28,11 @@ elif sys.version_info[0] > 2:
 
 # if [[ --output-mode json ]] is passed to minizinc, then the output
 # will be parsed by json.loads().
+#
+# Note: array indices are not returned in JSON output, so results are
+# returned as 0-indexed lists.
+#
+# TODO: newer versions of minizinc have [[ --json-stream ]]
 
 # parse mzn output to Python values, currently we handle:
 #   "true" | "false" -> True | False
@@ -56,7 +61,7 @@ def parse(s, ctx=None):
   # verbatim value (could be an enum)
   return s
 
-# parse an mzn array to a python dict()
+# parse an mzn array to a Python dict()
 def parse_array(d, i, vs, ctx=None):
   #print([d, i, vs])
   # look for index = <number>..<number>
@@ -338,8 +343,7 @@ class MiniZinc(object):
         if re.search(r'^-+$', s):
           #print("<{s}> end of record".format(s=s))
           # detect JSON mode
-          if ss and ss[0] == '{':
-            d = json.loads(' '.join(ss))
+          if ss and ss[0] == '{': d = json.loads(' '.join(ss))
           if verbose > 0: print(">>> solution: " + str.join(' ', (k + "=" + repr(v) for (k, v) in d.items())))
           if result:
             yield Value(*(d[k] for k in Value._fields))
@@ -358,7 +362,7 @@ class MiniZinc(object):
             if d is None: d = collections.OrderedDict()
             d[k] = parse(v, self)
             ss = list()
-            
+
     finally:
       if create:
         # remove the temporary file

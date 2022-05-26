@@ -4,7 +4,7 @@
 from __future__ import print_function
 
 __author__ = "Jim Randell <jim.randell@gmail.com>"
-__version__ = "2022-05-26"
+__version__ = "2022-05-27"
 
 import collections
 import re
@@ -165,7 +165,7 @@ def read_args(args):
 # does <path> represent a file?
 def is_file(path):
   # does it directly name a file?
-  if os.path.isfile(path): return path
+  if os.path.isfile(path): return os.path.abspath(path)
   # try looking in the same directory as the script
   x = sys.argv[0]
   if x:
@@ -223,8 +223,7 @@ class MiniZinc(object):
       setattr(self, k, v)
 
   def _getattr(self, k, d=None):
-    if d and k in d:
-      return d[k]
+    if d and k in d: return d[k]
     return getattr(self, k)
 
   # solve the model
@@ -237,7 +236,7 @@ class MiniZinc(object):
     #   MZN_DEBUG="solver=mzn-gecode -a; verbose=3"
     mzn_debug = os.getenv("MZN_DEBUG")
     if mzn_debug:
-      print(">>> MZN_DEBUG={mzn_debug}".format(mzn_debug=mzn_debug))
+      print(">>> MZN_DEBUG=\"{mzn_debug}\"".format(mzn_debug=mzn_debug))
       for (k, v) in read_args(re.split(r';\s*', mzn_debug)):
         args[k] = v
 
@@ -252,6 +251,22 @@ class MiniZinc(object):
     # additional arguments required on win32
     mzn_dir = self._getattr('mzn_dir', args)
     use_shell = self._getattr('use_shell', args)
+
+    if verbose > 2:
+      # system info
+      print(">>> [system]")
+      print(">>>   [python version] {x}".format(x=sys.version_info))
+      print(">>>   [sys.platform] {x}".format(x=sys.platform))
+      print(">>>   [sys.argv] {x}".format(x=sys.argv))
+      # local vars
+      print(">>> [vars]")
+      print(">>>   [type(model)] {x}".format(x=type(model)))
+      (ls, vs) = (locals(), [
+        'result', 'solver', 'encoding', 'use_shebang', 'use_embed', 'use_enum',
+        'verbose', 'mzn_dir', 'use_shell',
+      ])
+      for v in vs:
+        print(">>>   [{v}] {x}".format(v=v, x=ls[v]))
 
     # use self as a parsing context
     self._index = args.get('_index', dict())
@@ -329,7 +344,7 @@ class MiniZinc(object):
 
       # run minizinc
       if verbose > 2: print(">>> model=\"\"\"\n{model}\n\"\"\"".format(model=model.strip()))
-      if verbose > 2: print(">>> path={path}".format(path=path))
+      if verbose > 2: print(">>> path=\"{path}\"".format(path=path))
       if verbose > 1: print(">>> solver={solver}".format(solver=solver))
       p = subprocess.Popen(solver + [path], stdout=subprocess.PIPE, bufsize=-1, cwd=mzn_dir, shell=use_shell)
       d = None

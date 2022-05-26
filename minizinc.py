@@ -4,7 +4,7 @@
 from __future__ import print_function
 
 __author__ = "Jim Randell <jim.randell@gmail.com>"
-__version__ = "2022-05-25"
+__version__ = "2022-05-26"
 
 import collections
 import re
@@ -232,13 +232,13 @@ class MiniZinc(object):
     """
     solve the MiniZinc model and return solutions as Python objects.
     """
-    
+
     # can set MZN_DEBUG to override arguments, e.g.:
     #   MZN_DEBUG="solver=mzn-gecode -a; verbose=3"
     mzn_debug = os.getenv("MZN_DEBUG")
     if mzn_debug:
       print(">>> MZN_DEBUG={mzn_debug}".format(mzn_debug=mzn_debug))
-      for x in read_args(re.split(r';\s*', mzn_debug)):
+      for (k, v) in read_args(re.split(r';\s*', mzn_debug)):
         args[k] = v
 
     model = self._getattr('model', args)

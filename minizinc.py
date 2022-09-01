@@ -4,7 +4,7 @@
 from __future__ import print_function
 
 __author__ = "Jim Randell <jim.randell@gmail.com>"
-__version__ = "2022-05-27"
+__version__ = "2022-08-31"
 
 import collections
 import re
@@ -354,7 +354,7 @@ class MiniZinc(object):
         if not s: break
         # read output (in the appropriate encoding)
         s = s.decode(encoding).rstrip()
-        #print(">>> {s} <<<".format(s=s))
+        ##print(">>> {s} <<<".format(s=s))
         if re.search(r'^-+$', s):
           #print("<{s}> end of record".format(s=s))
           # detect JSON mode
@@ -383,7 +383,7 @@ class MiniZinc(object):
         # remove the temporary file
         os.unlink(path)
 
-  def go(self, **args):
+  def run(self, **args):
     """
     solve the MiniZinc model and output solutions.
 
@@ -399,6 +399,8 @@ class MiniZinc(object):
         print(substitute(fmt, s))
       else:
         print(str.join(' ', (k + "=" + repr(v) for (k, v) in s.items())))
+
+  go = run
 
   def substitute(self, s, t):
     """

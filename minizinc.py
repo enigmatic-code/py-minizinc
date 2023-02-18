@@ -289,6 +289,8 @@ class MiniZinc(object):
       if path:
         with open(path, 'r') as fh:
           model = fh.read()
+      # strip comments from the model (from '%' to end of line)
+      model = re.sub(r'%(.*)', r'', model)
       # evaluate any embedded python
       if _python > 2:
         model = eval('f' + repr(model))
@@ -453,8 +455,8 @@ def alphametic(s, base=10):
 
 # substitute ...
 def substitute(s, d):
-  fn = (d if callable(d) else lambda x: str(d.get(x, '?')))
-  return re.sub('{(\w+?)}', lambda m: str.join('', (fn(x) for x in m.group(1))), s)
+  fn = (d if callable(d) else (lambda x: str(d.get(x, '?'))))
+  return re.sub('{(\w+)}', (lambda m: fn(m.group(1))), s)
 
 
 # command line usage
@@ -470,4 +472,4 @@ if __name__ == "__main__":
   if not argv: usage()
   args = dict(read_args(argv[:-1]))
   p = MiniZinc(argv[-1], **args)
-  p.go(fmt=args.get('fmt', None))
+  p.run(fmt=args.get('fmt', None))

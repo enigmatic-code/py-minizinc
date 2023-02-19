@@ -108,8 +108,9 @@ def find_enum_defs(s):
 _defaults = {
   'model': None,
   'result': None,
-  'solver': 'minizinc -a', # formerly: 'mzn-gecode -a'
+  'solver': 'minizinc -a',  # formerly: 'mzn-gecode -a'
   'encoding': 'utf-8',
+  'fmt': None,  # output template
   'use_shebang': 0,
   'use_embed': 0,
   'use_enum': 0,
@@ -184,6 +185,7 @@ class MiniZinc(object):
     result = how to return the results (default: None)
     solver = the solver to use (default: "minizinc -a")
     encoding = encoding used by MiniZinc (default: "utf-8")
+    fmt = output format (default: None)
     use_embed = if true, evaluate embedded Python 3 code in model (default: 0)
     use_shebang = if true, get 'solver' from model (default: 0)
     use_enum = if true, attempt to use enum definitions from model (default: 0)
@@ -244,6 +246,7 @@ class MiniZinc(object):
     result = self._getattr('result', args)
     solver = self._getattr('solver', args)
     encoding = self._getattr('encoding', args)
+    fmt = self._getattr('fmt', args)
     use_shebang = self._getattr('use_shebang', args)
     use_embed = self._getattr('use_embed', args)
     use_enum = self._getattr('use_enum', args)
@@ -262,7 +265,7 @@ class MiniZinc(object):
       print(">>> [vars]")
       print(">>>   [type(model)] {x}".format(x=type(model)))
       (ls, vs) = (locals(), [
-        'result', 'solver', 'encoding', 'use_shebang', 'use_embed', 'use_enum',
+        'result', 'solver', 'encoding', 'fmt', 'use_shebang', 'use_embed', 'use_enum',
         'verbose', 'mzn_dir', 'use_shell',
       ])
       for v in vs:
@@ -346,6 +349,7 @@ class MiniZinc(object):
 
       # run minizinc
       if verbose > 2: print(">>> model=\"\"\"\n{model}\n\"\"\"".format(model=model.strip()))
+      if verbose > 2 and self.fmt: print(">>> fmt=\"{fmt}\"".format(fmt=self.fmt))
       if verbose > 2: print(">>> path=\"{path}\"".format(path=path))
       if verbose > 1: print(">>> solver={solver}".format(solver=solver))
       p = subprocess.Popen(solver + [path], stdout=subprocess.PIPE, bufsize=-1, cwd=mzn_dir, shell=use_shell)
@@ -397,8 +401,9 @@ class MiniZinc(object):
         s = s._asdict()
       except AttributeError:
         pass
-      if fmt:
-        print(substitute(fmt, s))
+      fmt_ = fmt or self.fmt
+      if fmt_:
+        print(substitute(fmt_, s))
       else:
         print(str.join(' ', (k + "=" + repr(v) for (k, v) in s.items())))
 
@@ -453,6 +458,12 @@ def make_alphametic(symbols, base=10):
 def alphametic(s, base=10):
   return re.sub('{(\w+?)}', lambda m: _word(m.group(1), base), s)
 
+# set the output format
+def output(fmt):
+  self = sys._getframe(1).f_locals['self']
+  self.fmt = fmt
+  return ''
+
 # substitute ...
 def substitute(s, d):
   fn = (d if callable(d) else (lambda x: str(d.get(x, '?'))))
@@ -472,4 +483,4 @@ if __name__ == "__main__":
   if not argv: usage()
   args = dict(read_args(argv[:-1]))
   p = MiniZinc(argv[-1], **args)
-  p.run(fmt=args.get('fmt', None))
+  p.run()

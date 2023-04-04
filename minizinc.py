@@ -456,7 +456,7 @@ def make_alphametic(symbols, base=10):
 
 # expand alphametic words (enclosed in braces) in s
 def alphametic(s, base=10):
-  return re.sub('{(\w+?)}', lambda m: _word(m.group(1), base), s)
+  return re.sub(r'{(\w+?)}', lambda m: _word(m.group(1), base), s)
 
 # set the output format
 def output(fmt):
@@ -467,7 +467,7 @@ def output(fmt):
 # substitute ...
 def substitute(s, d):
   fn = (d if callable(d) else (lambda x: str(d.get(x, '?'))))
-  return re.sub('{(\w+)}', (lambda m: fn(m.group(1))), s)
+  return re.sub(r'{(\w+)}', (lambda m: fn(m.group(1))), s)
 
 
 # command line usage

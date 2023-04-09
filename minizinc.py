@@ -300,7 +300,7 @@ class MiniZinc(object):
       else:
         # not supported in Python 2
         print(">>> WARNING: embedded Python code not supported in Python 2")
-      # the model is definately a string
+      # the model is definitely a string
       path = None
 
     # is the model already a file? (possible race condition here)

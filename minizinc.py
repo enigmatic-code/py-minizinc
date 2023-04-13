@@ -4,7 +4,7 @@
 from __future__ import print_function
 
 __author__ = "Jim Randell <jim.randell@gmail.com>"
-__version__ = "2022-08-31"
+__version__ = "2023-04-13"
 
 import collections
 import re
@@ -12,6 +12,7 @@ import json
 
 import subprocess
 import tempfile
+import atexit
 import os
 
 import sys
@@ -173,6 +174,13 @@ def is_file(path):
     x = os.path.join(os.path.dirname(os.path.abspath(x)), path)
     if os.path.isfile(x): return x
 
+# remove a file
+def unlink(path):
+  try:
+    os.unlink(path)
+  except FileNotFoundError:
+    pass
+
 class MiniZinc(object):
   """
   Parameters can be specified as keyword arguments either during
@@ -308,6 +316,8 @@ class MiniZinc(object):
     if not path:
       create = 1
       (fd, path) = tempfile.mkstemp(suffix='.mzn', text=False)
+      # clean up at exit (if the file is still around)
+      atexit.register(unlink, path)
 
     try:
       if create:
@@ -387,7 +397,7 @@ class MiniZinc(object):
     finally:
       if create:
         # remove the temporary file
-        os.unlink(path)
+        unlink(path)
 
   def run(self, **args):
     """

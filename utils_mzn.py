@@ -1,17 +1,42 @@
 #! python3
+###############################################################################
+#
+# File:         utils_mzn.py
+# RCS:          $Header: $
+# Description:  Useful algorithms in MiniZinc
+# Author:       Jim Randell
+# Created:      Tue Apr  4 15:47:53 2023
+# Modified:     Mon Apr 17 10:59:25 2023 (Jim Randell) jim.randell@gmail.com
+# Language:     Python
+# Package:      N/A
+# Status:       Experimental (Do Not Distribute)
+#
+# (C) Copyright 2023, Jim Randell, all rights reserved.
+#
+###############################################################################
 # -*- mode: Python; python-indent-offset: 2; -*-
 
 from __future__ import print_function
 
 # implementation of useful algorithms in MiniZinc (using minizinc.py)
+#  - hitting_set() / hitting_sets() = minimum cardinality hitting set
 
 from minizinc import MiniZinc
 
-# find hitting sets
-# size = None -> find a minimal cardinality hitting set
-# size = int  -> find all hitting sets of specified size
-# hit = "> 0", "== 1" -> size of intersection with each set
 def hitting_sets(ss, size=None, hit="> 0", solver=None, verbose=0):
+  """
+  find hitting sets for the sets in <ss>.
+
+    size = None -> find a minimal cardinality hitting set.
+    size = int  -> find all hitting sets of specified size (solver permitting)
+
+    hit = "> 0", "== 1", ... -> size of intersection with each set
+
+  the following arguments are passed to MiniZinc:
+
+    solver -> command to invoke minizinc (use -a for multiple solutions)
+    verbose -> verbosity level
+  """
   # find elements in the universe
   vs = sorted(set().union(*ss))
   if not vs:
@@ -57,7 +82,11 @@ def hitting_sets(ss, size=None, hit="> 0", solver=None, verbose=0):
     # return the elements of the hitting set
     yield set(vs[j] for (j, x) in enumerate(hs) if x)
 
-# find a single hitting set
 def hitting_set(ss, size=None, hit="> 0", solver=None, verbose=0):
+  """
+  find a single hitting set.
+
+  see hitting_sets() for arguments.
+  """
   for hs in hitting_sets(ss, size=size, hit=hit, solver=solver, verbose=verbose):
     return hs

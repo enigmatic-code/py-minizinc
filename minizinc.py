@@ -1,10 +1,25 @@
 #! python3
+###############################################################################
+#
+# File:         minizinc.py
+# RCS:          $Header: $
+# Description:  Python interface to MiniZinc
+# Author:       Jim Randell
+# Created:      Mon Sep 05 10:43:16 2016
+# Modified:     Mon Apr 17 10:45:53 2023 (Jim Randell) jim.randell@gmail.com
+# Language:     Python
+# Package:      N/A
+# Status:       Experimental (Do Not Distribute)
+#
+# (c) Copyright 2016-2023, Jim Randell, all rights reserved.
+#
+###############################################################################
 # -*- mode: Python; py-indent-offset: 2; -*-
 
 from __future__ import print_function
 
 __author__ = "Jim Randell <jim.randell@gmail.com>"
-__version__ = "2023-04-13"
+__version__ = "2023-04-17"
 
 import collections
 import re

@@ -5,8 +5,8 @@
 # RCS:          $Header: $
 # Description:  Python interface to MiniZinc
 # Author:       Jim Randell
-# Created:      Mon Sep 05 10:43:16 2016
-# Modified:     Mon Apr 17 10:45:53 2023 (Jim Randell) jim.randell@gmail.com
+# Created:      Mon Sep  5 10:43:16 2016
+# Modified:     Mon Apr 17 10:57:14 2023 (Jim Randell) jim.randell@gmail.com
 # Language:     Python
 # Package:      N/A
 # Status:       Experimental (Do Not Distribute)
@@ -193,7 +193,7 @@ def is_file(path):
 def unlink(path):
   try:
     os.unlink(path)
-  except FileNotFoundError:
+  except OSError:
     pass
 
 class MiniZinc(object):

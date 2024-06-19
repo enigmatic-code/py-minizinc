@@ -6,7 +6,7 @@
 # Description:  Python interface to MiniZinc
 # Author:       Jim Randell
 # Created:      Mon Sep  5 10:43:16 2016
-# Modified:     Mon Apr 17 10:57:14 2023 (Jim Randell) jim.randell@gmail.com
+# Modified:     Sat Mar  2 14:07:47 2024 (Jim Randell) jim.randell@gmail.com
 # Language:     Python
 # Package:      N/A
 # Status:       Experimental (Do Not Distribute)
@@ -19,7 +19,7 @@
 from __future__ import print_function
 
 __author__ = "Jim Randell <jim.randell@gmail.com>"
-__version__ = "2023-04-17"
+__version__ = "2023-04-18"
 
 import collections
 import re
@@ -281,18 +281,18 @@ class MiniZinc(object):
     if verbose > 2:
       # system info
       print(">>> [system]")
-      print(">>>   [python version] {x}".format(x=sys.version_info))
-      print(">>>   [sys.platform] {x}".format(x=sys.platform))
-      print(">>>   [sys.argv] {x}".format(x=sys.argv))
+      print(">>>   [python version] {x!r}".format(x=sys.version_info))
+      print(">>>   [sys.platform] {x!r}".format(x=sys.platform))
+      print(">>>   [sys.argv] {x!r}".format(x=sys.argv))
       # local vars
       print(">>> [vars]")
-      print(">>>   [type(model)] {x}".format(x=type(model)))
+      print(">>>   [type(model)] {x!r}".format(x=type(model)))
       (ls, vs) = (locals(), [
         'result', 'solver', 'encoding', 'fmt', 'use_shebang', 'use_embed', 'use_enum',
         'verbose', 'mzn_dir', 'use_shell',
       ])
       for v in vs:
-        print(">>>   [{v}] {x}".format(v=v, x=ls[v]))
+        print(">>>   [{v}] {x!r}".format(v=v, x=ls[v]))
 
     # use self as a parsing context
     self._index = args.get('_index', dict())
@@ -443,8 +443,28 @@ class MiniZinc(object):
 
 # helper functions for interpolation in MiniZinc models
 
+# set a global variable
+def assign(name, value):
+  globals()[name] = value
+  return ""
+
 # declare a bunch of minizinc variables
 def var(*args):
+  """
+  declare a collection of MiniZinc variables:
+
+    var("0..9", "xyz")
+    ->
+    var 0..9: x;
+    var 0..9: y;
+    var 0..9: z:
+
+    var("array [0..9] of", "0..9", "XYZ")
+    ->
+    array [0..9] of var 0..9: X;
+    array [0..9] of var 0..9: Y;
+    array [0..9] of var 0..9: Z;
+  """
   if len(args) == 2:
     # var("0..9", "xyz")
     (domain, vars) = args
